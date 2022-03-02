@@ -16,9 +16,12 @@ var _ core.EventListener = (*Manager)(nil)
 func NewManager(opts ...ConfigOpt) *Manager {
 	config := &DefaultConfig
 	config.Apply(opts)
-	return &Manager{
-		Config: *config,
+	manager := &Manager{
+		Config:     *config,
+		paginators: map[string]*Paginator{},
 	}
+	manager.startCleanup()
+	return manager
 }
 
 type Manager struct {
@@ -50,7 +53,7 @@ func (m *Manager) cleanup() {
 	}
 }
 
-func (m *Manager) Create(interaction *core.CreateInteraction, paginator *Paginator) {
+func (m *Manager) Create(interaction core.CreateInteraction, paginator *Paginator) error {
 	if paginator.ID == "" {
 		paginator.ID = interaction.ID.String()
 	}
@@ -63,9 +66,7 @@ func (m *Manager) Create(interaction *core.CreateInteraction, paginator *Paginat
 	} else {
 		err = interaction.CreateMessage(m.makeMessageCreate(paginator))
 	}
-	if err != nil {
-		interaction.Bot.Logger.Error("Failed to create paginator message: ", err)
-	}
+	return err
 }
 
 func (m *Manager) add(paginator *Paginator) {
@@ -125,6 +126,8 @@ func (m *Manager) OnEvent(event core.Event) {
 		paginator.CurrentPage = paginator.MaxPages - 1
 	}
 
+	paginator.Expiry = time.Now()
+
 	if err := e.UpdateMessage(m.makeMessageUpdate(paginator)); err != nil {
 		e.Bot().Logger.Error("Error updating paginator message: ", err)
 	}
@@ -155,21 +158,21 @@ func (m *Manager) createComponents(paginator *Paginator) discord.ContainerCompon
 	var actionRow discord.ActionRowComponent
 
 	if cfg.First != nil {
-		actionRow.AddComponents(discord.NewButton(cfg.First.Style, cfg.First.Label, m.formatCustomID(paginator, "first"), "").WithEmoji(cfg.First.Emoji).WithDisabled(paginator.CurrentPage == 0))
+		actionRow = actionRow.AddComponents(discord.NewButton(cfg.First.Style, cfg.First.Label, m.formatCustomID(paginator, "first"), "").WithEmoji(cfg.First.Emoji).WithDisabled(paginator.CurrentPage == 0))
 	}
 	if cfg.Back != nil {
-		actionRow.AddComponents(discord.NewButton(cfg.Back.Style, cfg.Back.Label, m.formatCustomID(paginator, "back"), "").WithEmoji(cfg.Back.Emoji).WithDisabled(paginator.CurrentPage == 0))
+		actionRow = actionRow.AddComponents(discord.NewButton(cfg.Back.Style, cfg.Back.Label, m.formatCustomID(paginator, "back"), "").WithEmoji(cfg.Back.Emoji).WithDisabled(paginator.CurrentPage == 0))
 	}
 
 	if cfg.Stop != nil {
-		actionRow.AddComponents(discord.NewButton(cfg.Stop.Style, cfg.Stop.Label, m.formatCustomID(paginator, "stop"), "").WithEmoji(cfg.Stop.Emoji))
+		actionRow = actionRow.AddComponents(discord.NewButton(cfg.Stop.Style, cfg.Stop.Label, m.formatCustomID(paginator, "stop"), "").WithEmoji(cfg.Stop.Emoji))
 	}
 
 	if cfg.Next != nil {
-		actionRow.AddComponents(discord.NewButton(cfg.Next.Style, cfg.Next.Label, m.formatCustomID(paginator, "next"), "").WithEmoji(cfg.Next.Emoji).WithDisabled(paginator.CurrentPage == paginator.MaxPages-1))
+		actionRow = actionRow.AddComponents(discord.NewButton(cfg.Next.Style, cfg.Next.Label, m.formatCustomID(paginator, "next"), "").WithEmoji(cfg.Next.Emoji).WithDisabled(paginator.CurrentPage == paginator.MaxPages-1))
 	}
 	if cfg.Last != nil {
-		actionRow.AddComponents(discord.NewButton(cfg.Last.Style, cfg.Last.Label, m.formatCustomID(paginator, "last"), "").WithEmoji(cfg.Last.Emoji).WithDisabled(paginator.CurrentPage == paginator.MaxPages-1))
+		actionRow = actionRow.AddComponents(discord.NewButton(cfg.Last.Style, cfg.Last.Label, m.formatCustomID(paginator, "last"), "").WithEmoji(cfg.Last.Emoji).WithDisabled(paginator.CurrentPage == paginator.MaxPages-1))
 	}
 
 	return actionRow

@@ -35,6 +35,8 @@ var DefaultConfig = Config{
 			Style: discord.ButtonStylePrimary,
 		},
 	},
+	CustomIDPrefix: "paginator",
+	EmbedColor:     0x4c50c1,
 }
 
 type Config struct {
@@ -69,5 +71,17 @@ func (c *Config) Apply(opts []ConfigOpt) {
 func WithButtonsConfig(buttonsConfig ButtonsConfig) ConfigOpt {
 	return func(config *Config) {
 		config.ButtonsConfig = buttonsConfig
+	}
+}
+
+func WithCustomIDPrefix(prefix string) ConfigOpt {
+	return func(config *Config) {
+		config.CustomIDPrefix = prefix
+	}
+}
+
+func WithEmbedColor(color int) ConfigOpt {
+	return func(config *Config) {
+		config.EmbedColor = color
 	}
 }
