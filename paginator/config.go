@@ -35,14 +35,16 @@ var DefaultConfig = Config{
 			Style: discord.ButtonStylePrimary,
 		},
 	},
-	CustomIDPrefix: "paginator",
-	EmbedColor:     0x4c50c1,
+	NoPermissionMessage: "You can't interact with this paginator because it's not yours.",
+	CustomIDPrefix:      "paginator",
+	EmbedColor:          0x4c50c1,
 }
 
 type Config struct {
-	ButtonsConfig  ButtonsConfig
-	CustomIDPrefix string
-	EmbedColor     int
+	ButtonsConfig       ButtonsConfig
+	NoPermissionMessage string
+	CustomIDPrefix      string
+	EmbedColor          int
 }
 
 type ButtonsConfig struct {
@@ -61,7 +63,6 @@ type ComponentOptions struct {
 
 type ConfigOpt func(config *Config)
 
-// Apply applies the given RequestOpt(s) to the RequestConfig & sets the context if none is set
 func (c *Config) Apply(opts []ConfigOpt) {
 	for _, opt := range opts {
 		opt(c)
@@ -71,6 +72,12 @@ func (c *Config) Apply(opts []ConfigOpt) {
 func WithButtonsConfig(buttonsConfig ButtonsConfig) ConfigOpt {
 	return func(config *Config) {
 		config.ButtonsConfig = buttonsConfig
+	}
+}
+
+func WithNoPermissionMessage(noPermissionMessage string) ConfigOpt {
+	return func(config *Config) {
+		config.NoPermissionMessage = noPermissionMessage
 	}
 }
 
