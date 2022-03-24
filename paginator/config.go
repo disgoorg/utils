@@ -1,43 +1,45 @@
 package paginator
 
-import "github.com/DisgoOrg/disgo/discord"
+import "github.com/disgoorg/disgo/discord"
 
-var DefaultConfig = Config{
-	ButtonsConfig: ButtonsConfig{
-		First: &ComponentOptions{
-			Emoji: discord.ComponentEmoji{
-				Name: "⏮",
+func DefaultConfig() *Config {
+	return &Config{
+		ButtonsConfig: ButtonsConfig{
+			First: &ComponentOptions{
+				Emoji: discord.ComponentEmoji{
+					Name: "⏮",
+				},
+				Style: discord.ButtonStylePrimary,
 			},
-			Style: discord.ButtonStylePrimary,
-		},
-		Back: &ComponentOptions{
-			Emoji: discord.ComponentEmoji{
-				Name: "◀",
+			Back: &ComponentOptions{
+				Emoji: discord.ComponentEmoji{
+					Name: "◀",
+				},
+				Style: discord.ButtonStylePrimary,
 			},
-			Style: discord.ButtonStylePrimary,
-		},
-		Stop: &ComponentOptions{
-			Emoji: discord.ComponentEmoji{
-				Name: "🗑",
+			Stop: &ComponentOptions{
+				Emoji: discord.ComponentEmoji{
+					Name: "🗑",
+				},
+				Style: discord.ButtonStyleDanger,
 			},
-			Style: discord.ButtonStyleDanger,
-		},
-		Next: &ComponentOptions{
-			Emoji: discord.ComponentEmoji{
-				Name: "▶",
+			Next: &ComponentOptions{
+				Emoji: discord.ComponentEmoji{
+					Name: "▶",
+				},
+				Style: discord.ButtonStylePrimary,
 			},
-			Style: discord.ButtonStylePrimary,
-		},
-		Last: &ComponentOptions{
-			Emoji: discord.ComponentEmoji{
-				Name: "⏩",
+			Last: &ComponentOptions{
+				Emoji: discord.ComponentEmoji{
+					Name: "⏩",
+				},
+				Style: discord.ButtonStylePrimary,
 			},
-			Style: discord.ButtonStylePrimary,
 		},
-	},
-	NoPermissionMessage: "You can't interact with this paginator because it's not yours.",
-	CustomIDPrefix:      "paginator",
-	EmbedColor:          0x4c50c1,
+		NoPermissionMessage: "You can't interact with this paginator because it's not yours.",
+		CustomIDPrefix:      "paginator",
+		EmbedColor:          0x4c50c1,
+	}
 }
 
 type Config struct {
@@ -69,24 +71,28 @@ func (c *Config) Apply(opts []ConfigOpt) {
 	}
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func WithButtonsConfig(buttonsConfig ButtonsConfig) ConfigOpt {
 	return func(config *Config) {
 		config.ButtonsConfig = buttonsConfig
 	}
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func WithNoPermissionMessage(noPermissionMessage string) ConfigOpt {
 	return func(config *Config) {
 		config.NoPermissionMessage = noPermissionMessage
 	}
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func WithCustomIDPrefix(prefix string) ConfigOpt {
 	return func(config *Config) {
 		config.CustomIDPrefix = prefix
 	}
 }
 
+//goland:noinspection GoUnusedExportedFunction
 func WithEmbedColor(color int) ConfigOpt {
 	return func(config *Config) {
 		config.EmbedColor = color

@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DisgoOrg/disgo/core"
-	"github.com/DisgoOrg/disgo/core/events"
-	"github.com/DisgoOrg/disgo/discord"
-	"github.com/DisgoOrg/snowflake"
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/snowflake"
 )
 
-var _ core.EventListener = (*Manager)(nil)
+var _ bot.EventListener = (*Manager)(nil)
 
 type Paginator struct {
 	PageFunc        func(page int, embed *discord.EmbedBuilder)
@@ -21,11 +21,11 @@ type Paginator struct {
 	ExpiryLastUsage bool
 	expiry          time.Time
 	currentPage     int
-	id              string
+	ID              string
 }
 
 func NewManager(opts ...ConfigOpt) *Manager {
-	config := &DefaultConfig
+	config := DefaultConfig()
 	config.Apply(opts)
 	manager := &Manager{
 		config:     *config,
@@ -58,30 +58,29 @@ func (m *Manager) cleanup() {
 	for _, p := range m.paginators {
 		if !p.expiry.IsZero() && p.expiry.After(now) {
 			// TODO: remove components?
-			delete(m.paginators, p.id)
+			delete(m.paginators, p.ID)
 		}
 	}
 }
 
-func (m *Manager) Create(interaction core.CreateInteraction, paginator *Paginator) error {
-	paginator.id = interaction.ID.String()
+func (m *Manager) Update(responderFunc events.InteractionResponderFunc, paginator *Paginator) error {
 	paginator.expiry = time.Now()
-
 	m.add(paginator)
 
-	var err error
-	if interaction.Acknowledged {
-		_, err = interaction.UpdateOriginalMessage(m.makeMessageUpdate(paginator))
-	} else {
-		err = interaction.CreateMessage(m.makeMessageCreate(paginator))
-	}
-	return err
+	return responderFunc(discord.InteractionCallbackTypeUpdateMessage, m.makeMessageUpdate(paginator))
+}
+
+func (m *Manager) Create(responderFunc events.InteractionResponderFunc, paginator *Paginator) error {
+	paginator.expiry = time.Now()
+	m.add(paginator)
+
+	return responderFunc(discord.InteractionCallbackTypeCreateMessage, m.makeMessageCreate(paginator))
 }
 
 func (m *Manager) add(paginator *Paginator) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.paginators[paginator.id] = paginator
+	m.paginators[paginator.ID] = paginator
 }
 
 func (m *Manager) remove(paginatorID string) {
@@ -90,12 +89,12 @@ func (m *Manager) remove(paginatorID string) {
 	delete(m.paginators, paginatorID)
 }
 
-func (m *Manager) OnEvent(event core.Event) {
+func (m *Manager) OnEvent(event bot.Event) {
 	e, ok := event.(*events.ComponentInteractionEvent)
 	if !ok {
 		return
 	}
-	customID := e.Data.ID()
+	customID := e.Data.CustomID()
 	if !strings.HasPrefix(customID.String(), m.config.CustomIDPrefix) {
 		return
 	}
@@ -106,9 +105,9 @@ func (m *Manager) OnEvent(event core.Event) {
 		return
 	}
 
-	if paginator.Creator != "" && paginator.Creator != e.User.ID {
+	if paginator.Creator != "" && paginator.Creator != e.User().ID {
 		if err := e.CreateMessage(discord.NewMessageCreateBuilder().SetContent(m.config.NoPermissionMessage).SetEphemeral(true).Build()); err != nil {
-			e.Bot().Logger.Error("Failed to send error message: ", err)
+			e.Client().Logger().Error("Failed to send error message: ", err)
 		}
 		return
 	}
@@ -124,7 +123,7 @@ func (m *Manager) OnEvent(event core.Event) {
 		err := e.UpdateMessage(discord.MessageUpdate{Components: &[]discord.ContainerComponent{}})
 		m.remove(paginatorID)
 		if err != nil {
-			e.Bot().Logger.Error("Error updating paginator message: ", err)
+			e.Client().Logger().Error("Error updating paginator message: ", err)
 		}
 		return
 
@@ -138,7 +137,7 @@ func (m *Manager) OnEvent(event core.Event) {
 	paginator.expiry = time.Now()
 
 	if err := e.UpdateMessage(m.makeMessageUpdate(paginator)); err != nil {
-		e.Bot().Logger.Error("Error updating paginator message: ", err)
+		e.Client().Logger().Error("Error updating paginator message: ", err)
 	}
 }
 
@@ -160,7 +159,7 @@ func (m *Manager) makeMessageUpdate(paginator *Paginator) discord.MessageUpdate 
 }
 
 func (m *Manager) formatCustomID(paginator *Paginator, action string) discord.CustomID {
-	return discord.CustomID(m.config.CustomIDPrefix + ":" + paginator.id + ":" + action)
+	return discord.CustomID(m.config.CustomIDPrefix + ":" + paginator.ID + ":" + action)
 }
 
 func (m *Manager) createComponents(paginator *Paginator) discord.ContainerComponent {
