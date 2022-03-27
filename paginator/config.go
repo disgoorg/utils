@@ -1,6 +1,10 @@
 package paginator
 
-import "github.com/disgoorg/disgo/discord"
+import (
+	"time"
+
+	"github.com/disgoorg/disgo/discord"
+)
 
 func DefaultConfig() *Config {
 	return &Config{
@@ -39,6 +43,8 @@ func DefaultConfig() *Config {
 		NoPermissionMessage: "You can't interact with this paginator because it's not yours.",
 		CustomIDPrefix:      "paginator",
 		EmbedColor:          0x4c50c1,
+		CleanupInterval:     30 * time.Second,
+		Timeout:             5 * time.Minute,
 	}
 }
 
@@ -47,6 +53,8 @@ type Config struct {
 	NoPermissionMessage string
 	CustomIDPrefix      string
 	EmbedColor          int
+	CleanupInterval     time.Duration
+	Timeout             time.Duration
 }
 
 type ButtonsConfig struct {
@@ -96,5 +104,19 @@ func WithCustomIDPrefix(prefix string) ConfigOpt {
 func WithEmbedColor(color int) ConfigOpt {
 	return func(config *Config) {
 		config.EmbedColor = color
+	}
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func WithCleanupInterval(cleanupInterval time.Duration) ConfigOpt {
+	return func(config *Config) {
+		config.CleanupInterval = cleanupInterval
+	}
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func WithTimeout(timeout time.Duration) ConfigOpt {
+	return func(config *Config) {
+		config.Timeout = timeout
 	}
 }

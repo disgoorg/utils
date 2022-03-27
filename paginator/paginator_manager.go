@@ -43,7 +43,7 @@ type Manager struct {
 
 func (m *Manager) startCleanup() {
 	go func() {
-		ticker := time.NewTimer(30 * time.Second)
+		ticker := time.NewTimer(m.config.CleanupInterval)
 		defer ticker.Stop()
 		for range ticker.C {
 			m.cleanup()
@@ -54,9 +54,9 @@ func (m *Manager) startCleanup() {
 func (m *Manager) cleanup() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	now := time.Now()
+	timeout := time.Now().Add(m.config.Timeout)
 	for _, p := range m.paginators {
-		if !p.expiry.IsZero() && p.expiry.After(now) {
+		if !p.expiry.IsZero() && p.expiry.After(timeout) {
 			// TODO: remove components?
 			delete(m.paginators, p.ID)
 		}
