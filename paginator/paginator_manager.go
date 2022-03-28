@@ -19,7 +19,7 @@ type Paginator struct {
 	MaxPages        int
 	Creator         snowflake.Snowflake
 	ExpiryLastUsage bool
-	expiry          time.Time
+	lastUsed        time.Time
 	currentPage     int
 	ID              string
 }
@@ -31,32 +31,30 @@ func NewManager(opts ...ConfigOpt) *Manager {
 		config:     *config,
 		paginators: map[string]*Paginator{},
 	}
-	manager.startCleanup()
+	go manager.startCleanup()
 	return manager
 }
 
 type Manager struct {
-	config     Config
-	mu         sync.Mutex
-	paginators map[string]*Paginator
+	config       Config
+	paginatorsMu sync.Mutex
+	paginators   map[string]*Paginator
 }
 
 func (m *Manager) startCleanup() {
-	go func() {
-		ticker := time.NewTimer(m.config.CleanupInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			m.cleanup()
-		}
-	}()
+	ticker := time.NewTicker(m.config.CleanupInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		m.cleanup()
+	}
 }
 
 func (m *Manager) cleanup() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	timeout := time.Now().Add(m.config.Timeout)
+	m.paginatorsMu.Lock()
+	defer m.paginatorsMu.Unlock()
+	timeout := time.Now().Add(-m.config.Timeout)
 	for _, p := range m.paginators {
-		if !p.expiry.IsZero() && p.expiry.After(timeout) {
+		if p.lastUsed.After(timeout) {
 			// TODO: remove components?
 			delete(m.paginators, p.ID)
 		}
@@ -64,28 +62,28 @@ func (m *Manager) cleanup() {
 }
 
 func (m *Manager) Update(responderFunc events.InteractionResponderFunc, paginator *Paginator) error {
-	paginator.expiry = time.Now()
+	paginator.lastUsed = time.Now()
 	m.add(paginator)
 
 	return responderFunc(discord.InteractionCallbackTypeUpdateMessage, m.makeMessageUpdate(paginator))
 }
 
 func (m *Manager) Create(responderFunc events.InteractionResponderFunc, paginator *Paginator) error {
-	paginator.expiry = time.Now()
+	paginator.lastUsed = time.Now()
 	m.add(paginator)
 
 	return responderFunc(discord.InteractionCallbackTypeCreateMessage, m.makeMessageCreate(paginator))
 }
 
 func (m *Manager) add(paginator *Paginator) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.paginatorsMu.Lock()
+	defer m.paginatorsMu.Unlock()
 	m.paginators[paginator.ID] = paginator
 }
 
 func (m *Manager) remove(paginatorID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.paginatorsMu.Lock()
+	defer m.paginatorsMu.Unlock()
 	delete(m.paginators, paginatorID)
 }
 
@@ -102,6 +100,9 @@ func (m *Manager) OnEvent(event bot.Event) {
 	paginatorID, action := ids[1], ids[2]
 	paginator, ok := m.paginators[paginatorID]
 	if !ok {
+		if err := e.UpdateMessage(discord.NewMessageUpdateBuilder().ClearContainerComponents().Build()); err != nil {
+			e.Client().Logger().Error("Failed to remove components from timed out paginator: ", err)
+		}
 		return
 	}
 
@@ -134,7 +135,9 @@ func (m *Manager) OnEvent(event bot.Event) {
 		paginator.currentPage = paginator.MaxPages - 1
 	}
 
-	paginator.expiry = time.Now()
+	if paginator.ExpiryLastUsage {
+		paginator.lastUsed = time.Now()
+	}
 
 	if err := e.UpdateMessage(m.makeMessageUpdate(paginator)); err != nil {
 		e.Client().Logger().Error("Error updating paginator message: ", err)
