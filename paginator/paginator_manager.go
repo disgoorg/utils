@@ -22,6 +22,7 @@ type Paginator struct {
 	lastUsed        time.Time
 	currentPage     int
 	ID              string
+	Ephemeral       bool
 }
 
 func NewManager(opts ...ConfigOpt) *Manager {
@@ -154,7 +155,11 @@ func (m *Manager) makeEmbed(paginator *Paginator) discord.Embed {
 }
 
 func (m *Manager) makeMessageCreate(paginator *Paginator) discord.MessageCreate {
-	return discord.MessageCreate{Embeds: []discord.Embed{m.makeEmbed(paginator)}, Components: []discord.ContainerComponent{m.createComponents(paginator)}}
+	var flags discord.MessageFlags
+	if paginator.Ephemeral {
+		flags = discord.MessageFlagEphemeral
+	}
+	return discord.MessageCreate{Embeds: []discord.Embed{m.makeEmbed(paginator)}, Components: []discord.ContainerComponent{m.createComponents(paginator)}, Flags: flags}
 }
 
 func (m *Manager) makeMessageUpdate(paginator *Paginator) discord.MessageUpdate {
