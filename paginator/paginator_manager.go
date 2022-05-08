@@ -9,7 +9,7 @@ import (
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/snowflake"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 var _ bot.EventListener = (*Manager)(nil)
@@ -17,7 +17,7 @@ var _ bot.EventListener = (*Manager)(nil)
 type Paginator struct {
 	PageFunc        func(page int, embed *discord.EmbedBuilder)
 	MaxPages        int
-	Creator         snowflake.Snowflake
+	Creator         snowflake.ID
 	ExpiryLastUsage bool
 	lastUsed        time.Time
 	currentPage     int
@@ -107,7 +107,7 @@ func (m *Manager) OnEvent(event bot.Event) {
 		return
 	}
 
-	if paginator.Creator != "" && paginator.Creator != e.User().ID {
+	if paginator.Creator != 0 && paginator.Creator != e.User().ID {
 		if err := e.CreateMessage(discord.NewMessageCreateBuilder().SetContent(m.config.NoPermissionMessage).SetEphemeral(true).Build()); err != nil {
 			e.Client().Logger().Error("Failed to send error message: ", err)
 		}
