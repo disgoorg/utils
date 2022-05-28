@@ -89,7 +89,7 @@ func (m *Manager) remove(paginatorID string) {
 }
 
 func (m *Manager) OnEvent(event bot.Event) {
-	e, ok := event.(*events.ComponentInteractionEvent)
+	e, ok := event.(*events.ComponentInteractionCreate)
 	if !ok {
 		return
 	}
