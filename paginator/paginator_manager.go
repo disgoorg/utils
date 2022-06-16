@@ -66,14 +66,14 @@ func (m *Manager) Update(responderFunc events.InteractionResponderFunc, paginato
 	paginator.lastUsed = time.Now()
 	m.add(paginator)
 
-	return responderFunc(discord.InteractionCallbackTypeUpdateMessage, m.makeMessageUpdate(paginator))
+	return responderFunc(discord.InteractionResponseTypeUpdateMessage, m.makeMessageUpdate(paginator))
 }
 
 func (m *Manager) Create(responderFunc events.InteractionResponderFunc, paginator *Paginator) error {
 	paginator.lastUsed = time.Now()
 	m.add(paginator)
 
-	return responderFunc(discord.InteractionCallbackTypeCreateMessage, m.makeMessageCreate(paginator))
+	return responderFunc(discord.InteractionResponseTypeCreateMessage, m.makeMessageCreate(paginator))
 }
 
 func (m *Manager) add(paginator *Paginator) {
