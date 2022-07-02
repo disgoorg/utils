@@ -3,7 +3,7 @@ module github.com/disgoorg/utils/paginator
 go 1.18
 
 require (
-	github.com/disgoorg/disgo v0.12.6-0.20220614224332-e36b668a50c3
+	github.com/disgoorg/disgo v0.13.1
 	github.com/disgoorg/snowflake/v2 v2.0.0
 )
 
